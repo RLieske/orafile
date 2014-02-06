@@ -7,10 +7,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static edu.gatech.gtri.orafile.Orafile.*;
 import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 public class OrafileTest {
 
@@ -48,16 +51,14 @@ public class OrafileTest {
 
     OrafileDict typicalTnsEntry() {
 
-        return dict("APPLE_MASTER", dict(
-            "DESCRIPTION", dict(
-            dict("ADDRESS_LIST", dict(
-                dict("ADDRESS", dict(
-                    dict("PROTOCOL", "TCP"),
-                    dict("HOST", "db-apple-master"),
-                    dict("PORT", "1521"))))),
-            dict("CONNECT_DATA", dict(
-                dict("SID", "apple"),
-                dict("SERVER", "DEDICATED"))))));
+        return dict(
+                "APPLE_MASTER",
+                dict("DESCRIPTION",
+                        dict(dict(
+                                "ADDRESS_LIST",
+                                dict(dict("ADDRESS",
+                                        dict(dict("PROTOCOL", "TCP"), dict("HOST", "db-apple-master"), dict("PORT", "1521"))))),
+                                dict("CONNECT_DATA", dict(dict("SID", "apple"), dict("SERVER", "DEDICATED"))))));
     }
 
     @Test
@@ -79,63 +80,43 @@ public class OrafileTest {
     @Test
     public void testList() throws Exception {
 
-        OrafileDict params = parse(
-            "NAMES.DIRECTORY_PATH= (LDAP, TNSNAMES, HOSTNAME)");
+        OrafileDict params = parse("NAMES.DIRECTORY_PATH= (LDAP, TNSNAMES, HOSTNAME)");
 
-        assertEquals(params, dict("NAMES.DIRECTORY_PATH",
-            strings("LDAP", "TNSNAMES", "HOSTNAME")));
+        assertEquals(params, dict("NAMES.DIRECTORY_PATH", strings("LDAP", "TNSNAMES", "HOSTNAME")));
     }
 
     @Test
     public void testEscape() throws Exception {
 
-        OrafileDict params = parse("BANANA\\#MASTER = " +
-            "(A='ba\\'na\\'na')" +
-            "(B=\\ \\ q)" +
-            "(C= \"one \\\"two\\\" three\"))" +
-            "# bananas");
+        OrafileDict params = parse("BANANA\\#MASTER = " + "(A='ba\\'na\\'na')" + "(B=\\ \\ q)" + "(C= \"one \\\"two\\\" three\"))"
+                + "# bananas");
 
-        assertEquals(params, dict("BANANA#MASTER", dict(
-            dict("A", "ba'na'na"),
-            dict("B", "  q"),
-            dict("C", "one \"two\" three")
-        )));
+        assertEquals(params, dict("BANANA#MASTER", dict(dict("A", "ba'na'na"), dict("B", "  q"), dict("C", "one \"two\" three"))));
     }
 
     @Test
     public void testMultipleAddresses() throws Exception {
 
-        OrafileDict params = parse("net_service_name=\n" +
-            "     (DESCRIPTION=\n" +
-            "      (ADDRESS=one)\n" +
-            "      (Address=two)\n" +
-            "      (ADDRESS=three)))");
+        OrafileDict params = parse("net_service_name=\n" + "     (DESCRIPTION=\n" + "      (ADDRESS=one)\n"
+                + "      (Address=two)\n" + "      (ADDRESS=three)))");
 
-        assertEquals(params, dict("net_service_name", dict(
-            dict("DESCRIPTION", dict(
-                dict("ADDRESS", "one"),
-                dict("Address", "two"),
-                dict("ADDRESS", "three")
-            ))
-        )));
+        assertEquals(
+                params,
+                dict("net_service_name",
+                        dict(dict("DESCRIPTION", dict(dict("ADDRESS", "one"), dict("Address", "two"), dict("ADDRESS", "three"))))));
 
-        OrafileVal net_service_name =
-            params.get("net_service_name").get(0);
-        OrafileVal description =
-            net_service_name.asNamedParamList().get("description").get(0);
-        List<OrafileVal> address =
-            description.asNamedParamList().get("address");
+        OrafileVal net_service_name = params.get("net_service_name").get(0);
+        OrafileVal description = net_service_name.asNamedParamList().get("description").get(0);
+        List<OrafileVal> address = description.asNamedParamList().get("address");
 
-        assertEquals(address, new ArrayList<OrafileVal>(
-            asList(string("one"), string("two"), string("three"))));
+        assertEquals(address, new ArrayList<OrafileVal>(asList(string("one"), string("two"), string("three"))));
     }
 
     @Test
     public void testTns1() throws Exception {
 
-        Map<String, String> values = parse(resource("tnsnames.ora"))
-            .get("APPLE_v1.0").get(0)
-            .findParamAttrs("address", asList("host", "port", "sid")).get(0);
+        Map<String, String> values = parse(resource("tnsnames.ora")).get("APPLE_v1.0").get(0)
+                .findParamAttrs("address", asList("host", "port", "sid")).get(0);
 
         assertEquals(values.get("host"), "db-apple-v1-0");
         assertEquals(values.get("port"), "1521");
@@ -145,9 +126,8 @@ public class OrafileTest {
     @Test
     public void testTns2() throws Exception {
 
-        Map<String, String> values = parse(resource("tnsnames.ora"))
-            .get("apple_master").get(0)
-            .findParamAttrs("address", asList("host", "port", "sid")).get(0);
+        Map<String, String> values = parse(resource("tnsnames.ora")).get("apple_master").get(0)
+                .findParamAttrs("address", asList("host", "port", "sid")).get(0);
 
         assertEquals(values.get("host"), "db-apple-master");
         assertEquals(values.get("port"), "1500");
@@ -157,9 +137,8 @@ public class OrafileTest {
     @Test
     public void testTns3() throws Exception {
 
-        List<Map<String, String>> values = parse(resource("tnsnames.ora"))
-            .get("BANANA_MASTER").get(0)
-            .findParamAttrs("address", asList("host", "port", "sid"));
+        List<Map<String, String>> values = parse(resource("tnsnames.ora")).get("BANANA_MASTER").get(0)
+                .findParamAttrs("address", asList("host", "port", "sid"));
 
         assertEquals(values.get(0).get("host"), "db-banana-master");
         assertEquals(values.get(0).get("port"), "1521");
@@ -185,6 +164,33 @@ public class OrafileTest {
     }
 
     @Test
+    public void testRegexp() throws Exception {
+        final String original = resource("listener-real-world.ora");
+        final String regexp = Matcher.quoteReplacement("(?<!\\{1})\\{1}(?!\\{1})");
+        final String replacement = Matcher.quoteReplacement("\\\\");
+        final String regexped = original.replaceAll(regexp, replacement);
+
+        final String expected = resource("listener-real-world-regexp.ora");
+
+        assertEquals(regexped, expected);
+    }
+
+    @Test
+    public void testRenderListener() throws Exception {
+
+        String original = resource("listener-real-world.ora");
+        final String regexp = Matcher.quoteReplacement("(?<!\\{1})\\{1}(?!\\{1})");
+        final String replacement = Matcher.quoteReplacement("\\\\");
+        final String regexped = original.replaceAll(regexp, replacement);
+
+        final OrafileDict parsed = parse(regexped);
+        final String rendered = new OrafileRenderer().renderFile(parsed);
+
+        final String expected = resource("listener-real-world-regexp-rendered.ora");
+        assertEquals(rendered, expected);
+    }
+
+    @Test
     public void testRenderSorted() throws Exception {
 
         OrafileDict parsed = parse(resource("render-test.ora"));
@@ -194,10 +200,16 @@ public class OrafileTest {
         assertEquals(rendered, resource("render-test-with-sorted-keys.ora"));
     }
 
+	String removeCR(final String fileContent) {
+		return fileContent.replaceAll("\r", "");
+	}
+
+	void assertEqualsIgnoringLineEnding(final String actual, final String expected) {
+		assertEquals(removeCR(actual), removeCR(expected));
+	}
+
     String resource(String filename) throws IOException {
-        return IOUtils.toString(
-            getClass().getResourceAsStream(filename)
-        );
+        return IOUtils.toString(getClass().getResourceAsStream(filename));
     }
 
 }
