@@ -12,8 +12,7 @@ import java.util.regex.Pattern;
 
 public class OrafileRenderer {
 
-    protected static final String LINE_SEPARATOR = "\n";
-    // System.getProperty("line.separator");
+    protected static final String LINE_SEPARATOR = System.getProperty("line.separator");
 
     private static final String APOSTROPHE = "\"";
     private static final String BRACKET_OPEN = "(";
@@ -22,10 +21,12 @@ public class OrafileRenderer {
     final boolean sortByKey;
 
     public OrafileRenderer() {
-        sortByKey = false;
+        this.sortByKey = false;
     }
 
-    OrafileRenderer(boolean sortByKey) {
+    // this constructor should not be used from the outside (see:
+    // http://ariya.ofilabs.com/2011/08/hall-of-api-shame-boolean-trap.html)
+    private OrafileRenderer(final boolean sortByKey) {
         this.sortByKey = sortByKey;
     }
 
@@ -35,12 +36,11 @@ public class OrafileRenderer {
      *            ordering.
      * @return A new {@link OrafileRenderer}.
      */
-    public OrafileRenderer sortByKey(boolean sortByKey) {
+    public OrafileRenderer sortByKey(final boolean sortByKey) {
         return new OrafileRenderer(sortByKey);
     }
 
-    private enum Parens {
-
+    protected enum Parens {
         Yes, No;
 
         boolean yes() {
@@ -48,7 +48,7 @@ public class OrafileRenderer {
         }
     }
 
-    public String renderFile(OrafileDict dict) {
+    public String renderFile(final OrafileDict dict) {
         StringWriter writer = new StringWriter();
         try {
             renderFile(dict, writer);
@@ -58,7 +58,7 @@ public class OrafileRenderer {
         return writer.toString();
     }
 
-    public void renderFile(OrafileDict dict, Writer writer) throws IOException {
+    public void renderFile(final OrafileDict dict, Writer writer) throws IOException {
         Iterator<OrafileDef> defs = defs(dict).iterator();
         while (defs.hasNext()) {
             OrafileDef def = defs.next();
@@ -127,7 +127,7 @@ public class OrafileRenderer {
 
     static final Pattern SAFE_STRING = Pattern.compile("^[A-Za-z0-9\\Q<>/.:;-_$+*&!%?@\\E]+$");
 
-    void renderString(Writer writer, String string) throws IOException {
+    void renderString(Writer writer, final String string) throws IOException {
         if (SAFE_STRING.matcher(string).matches()) {
             writer.append(string);
         } else {
@@ -136,7 +136,7 @@ public class OrafileRenderer {
         }
     }
 
-    List<OrafileDef> defs(OrafileDict dict) {
+    List<OrafileDef> defs(final OrafileDict dict) {
         if (!this.sortByKey) {
             return dict.asList();
         }

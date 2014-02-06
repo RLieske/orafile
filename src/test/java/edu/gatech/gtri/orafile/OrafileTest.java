@@ -1,19 +1,20 @@
 package edu.gatech.gtri.orafile;
 
-import org.apache.commons.io.IOUtils;
-import org.testng.annotations.Test;
+import static edu.gatech.gtri.orafile.Orafile.dict;
+import static edu.gatech.gtri.orafile.Orafile.parse;
+import static edu.gatech.gtri.orafile.Orafile.string;
+import static edu.gatech.gtri.orafile.Orafile.strings;
+import static java.util.Arrays.asList;
+import static org.testng.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import static edu.gatech.gtri.orafile.Orafile.*;
-import static java.util.Arrays.asList;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import org.apache.commons.io.IOUtils;
+import org.testng.annotations.Test;
 
 public class OrafileTest {
 
@@ -160,7 +161,7 @@ public class OrafileTest {
         OrafileDict parsed = parse(original);
         String rendered = new OrafileRenderer().renderFile(parsed);
 
-        assertEquals(rendered, original);
+        assertEqualsIgnoringLineEnding(rendered, original);
     }
 
     @Test
@@ -187,7 +188,7 @@ public class OrafileTest {
         final String rendered = new OrafileRenderer().renderFile(parsed);
 
         final String expected = resource("listener-real-world-regexp-rendered.ora");
-        assertEquals(rendered, expected);
+        assertEqualsIgnoringLineEnding(rendered, expected);
     }
 
     @Test
@@ -197,16 +198,16 @@ public class OrafileTest {
         OrafileRenderer renderer = new OrafileRenderer().sortByKey(true);
         String rendered = renderer.renderFile(parsed);
 
-        assertEquals(rendered, resource("render-test-with-sorted-keys.ora"));
+        assertEqualsIgnoringLineEnding(rendered, resource("render-test-with-sorted-keys.ora"));
     }
 
-	String removeCR(final String fileContent) {
-		return fileContent.replaceAll("\r", "");
-	}
+    String removeCR(final String fileContent) {
+        return fileContent.replaceAll("\r", "");
+    }
 
-	void assertEqualsIgnoringLineEnding(final String actual, final String expected) {
-		assertEquals(removeCR(actual), removeCR(expected));
-	}
+    void assertEqualsIgnoringLineEnding(final String actual, final String expected) {
+        assertEquals(removeCR(actual), removeCR(expected));
+    }
 
     String resource(String filename) throws IOException {
         return IOUtils.toString(getClass().getResourceAsStream(filename));
